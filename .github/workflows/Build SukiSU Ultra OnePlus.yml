@@ -15,6 +15,7 @@ on:
           - oneplus_10_pro_v
           - oneplus_10t_v
           - oneplus_11r_v
+          - oneplus_ace_racing_v
           - oneplus_ace2_v
           - oneplus_ace_pro_v
           - oneplus_11_v
@@ -101,7 +102,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+        
+      - name: '[Manual Fix] Create Manifest for OnePlus Ace Racing'
+        if: ${{ github.event.inputs.FILE == 'oneplus_ace_racing_v' }}
+        run: |
+          echo "Manually creating manifest for oneplus_ace_racing_v"
+          FILE="${{ github.event.inputs.FILE }}"
+          mkdir -p ".repo/manifests_fallback"
+          XML_PATH=".repo/manifests_fallback/${FILE}.xml"
+          cat > "$XML_PATH" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <manifest>
+            <remote fetch="https://github.com/OnePlusOSS/" name="oneplus" />
+            <default remote="oneplus" revision="master" sync-j="4" />
+            <project name="android_kernel_5.10_oneplus_mt6895" path="kernel_platform/common" revision="master" />
+          </manifest>
+          EOF
+          echo "✅ Created custom manifest at $XML_PATH"
+          
       - name: Maximize Build Space
         uses: easimon/maximize-build-space@master
         with:
@@ -118,6 +136,20 @@ jobs:
           set -e
           cd "$GITHUB_WORKSPACE"
           FILE="${{ github.event.inputs.FILE }}"
+          
+          if [[ "$FILE" == "oneplus_ace_racing_v" ]]; then
+            echo "✅ Manual override for oneplus_ace_racing_v"
+            echo "CPU=mt6895" >> $GITHUB_ENV
+            echo "CPUD=rick" >> $GITHUB_ENV
+            echo "ANDROID_VERSION=13.0.0" >> $GITHUB_ENV
+            echo "ANDROID_SHORT_VERSION=13" >> $GITHUB_ENV
+            echo "BUILD_METHOD=rick_defconfig" >> $GITHUB_ENV
+            echo "FILE_CONF=oneplus_ace_racing" >> $GITHUB_ENV
+            echo "FILE_BASE=OnePlusAceRacing" >> $GITHUB_ENV
+            echo "value=OnePlusAceRacing_Android13.0.0" >> "$GITHUB_OUTPUT"
+            exit 0 # 成功退出，不执行后续的自动搜索
+          fi
+          
           if [[ "$FILE" =~ ^(.+)_([a-zA-Z])$ ]]; then
             FILE_CONF="${BASH_REMATCH[1]}"
           else
